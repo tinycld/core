@@ -1,77 +1,48 @@
-# @tinycld/core
+# @tinycld/core — ⚠️ ARCHIVED
 
-The shared runtime + UI library for the TinyCld ecosystem. A standalone git
-repo, cloned as a workspace member sibling of the app shell and the feature
-packages (it is no longer bundled inside the app shell).
+> **This repository has been merged into [`tinycld/tinycld`](https://github.com/tinycld/tinycld) and is no longer maintained. Do not use it.**
 
-It exposes the app-facing surface of core via `@tinycld/core/*` subpaths:
-`~/lib/*`, `~/ui/*`, `~/components/*`, `~/types/*`, the top-level `Providers`,
-and the runtime package-derivation modules under `lib/packages/`
-(`config-types`, `derive-stores`, `derive-components`, `derive-seeds`,
-`static-registry`) which the app consumes from the generated
-`tinycld.config.ts`. The Go side (`server/`, module `tinycld.org/core`) provides
-`coreserver` plus subsystems (notify, push, mailer, audit, textextract,
-thumbnails, render, realtime, sharelink) and core's PocketBase migrations.
+`@tinycld/core` is no longer a standalone repository. Its source — the shared
+TypeScript/React runtime + UI library **and** the Go server (`server/`, module
+`tinycld.org/core`) — now lives **inside the merged `tinycld` repo** at
+[`tinycld/core/`](https://github.com/tinycld/tinycld/tree/main/core).
 
-## Layout
+The package is unchanged from a consumer's perspective: it is still the
+`@tinycld/core` workspace package and is imported through the same
+`@tinycld/core/*` subpaths (`lib/*`, `ui/*`, `components/*`, `types/*`,
+`file-viewer/*`, the top-level `Providers`). Only its *location* moved — from a
+separate repo cloned as a workspace sibling, to a package nested inside the
+`tinycld` member.
 
-Clone the workspace members as siblings under one root:
+## Why
 
-```sh
-git clone <app-remote>            ~/code/tinycld/app       # the app shell (member "app")
-git clone git@github.com:tinycld/core.git  ~/code/tinycld/core   # this repo
-git clone git@github.com:tinycld/contacts.git ~/code/tinycld/contacts  # any feature package
-```
+The app shell (formerly `tinycld/app`) and core were two separate repos with a
+bidirectional, circular build dependency: the app imported core as its runtime
+shell, while core imported the app's build-time generated output
+(`@tinycld/app-generated/*`) and inherited the app's vitest/tsconfig/biome
+configs by relative path. Merging them into one repo eliminates that cross-repo
+coupling and the per-change coordination overhead, while preserving the
+`@tinycld/core` package boundary.
 
-## Public surface
+## Where things are now
 
-Consumers import core through the `@tinycld/core/*` subpaths declared in
-`package.json` `exports`:
-
-| Subpath | What it provides |
+| Was (this archived repo) | Now (in `tinycld/tinycld`) |
 | --- | --- |
-| `@tinycld/core` | top-level `index.ts` re-exports |
-| `@tinycld/core/lib/*` | runtime helpers (pocketbase, mutations, errors, store, org-routes, the `packages/` derivation modules, …) |
-| `@tinycld/core/ui/*` | Gluestack + Uniwind UI primitives (forms, menu, modal, …) |
-| `@tinycld/core/components/*` | shared React components |
-| `@tinycld/core/types/*` | schema types (`pbSchema`, `pbZodSchema` — generated from applied migrations) |
-| `@tinycld/core/file-viewer/*` | file preview/icon helpers |
-| `@tinycld/core/Providers` | the top-level `Providers` component |
+| `~/code/tinycld/core/` (sibling repo) | `tinycld/core/` (nested package in the `tinycld` member) |
+| `core/server/` (module `tinycld.org/core`) | `tinycld/core/server/` (same module) |
+| imported as `@tinycld/core/*` | imported as `@tinycld/core/*` (unchanged) |
 
-### Sidebar primitives
+This repo's git history is preserved in the merged repo: core was grafted in via
+`git subtree`, so `git blame` on `tinycld/core/**` resolves to these commits.
 
-`@tinycld/core/components/sidebar-primitives` exports the building blocks every feature package uses to compose its sidebar:
+## What to do
 
-- `SidebarNav` — scrollable outer container.
-- `SidebarActionButton` — primary action at the top (e.g. "Compose", "+ Create").
-- `SidebarItem` — clickable row with icon/label/optional color dot.
-- `SidebarHeading` — section title with optional action button.
-- `SidebarDivider` — visual separator between groups.
-- `SidebarSlot` — extension point. A host package renders `<SidebarSlot target="<own-slug>" slot="<name>" />` at the insertion point; other packages target that `(target, slot)` pair via `sidebarContributions` in their manifest. Contributions are wired statically by the generator and rendered under `<Suspense>`. See [Sidebar slots](https://tinycld.org/docs/anatomy/sidebar-slots).
+- **Building or contributing to core:** work in
+  [`tinycld/tinycld`](https://github.com/tinycld/tinycld) under `core/`.
+- **Assembling a workspace:** `npx @tinycld/bootstrap@latest` now clones the
+  single `tinycld` member (app shell + core) instead of separate `app` + `core`
+  repos.
+- **Existing clones of this repo:** discard them; they reflect the pre-merge
+  layout and will not resolve against the current workspace.
 
-The Go side is module `tinycld.org/core` (`server/`), exporting `coreserver`
-plus subsystems (`notify`, `push`, `mailer`, `audit`, `textextract`,
-`thumbnails`, `render`, `realtime`, `sharelink`) and core's PocketBase
-migrations under `server/pb_migrations/`.
-
-## Development
-
-Core is typechecked + unit-tested as a workspace member — there is no separate
-build. From the **workspace root** (`~/code/tinycld/`):
-
-```sh
-pnpm install          # links members + runs the app generator (postinstall)
-npx vitest run       # runs core's unit tests as part of the suite
-```
-
-Members import core source directly via the `@tinycld/core/*` path alias
-(resolved by the app's tsconfig `paths` for typecheck, the
-`node_modules/@tinycld/core` symlink for Metro, and vitest aliases for tests).
-
-Core's own `tsconfig.json` carries self-referential `@tinycld/core` /
-`@tinycld/core/*` path aliases plus the `@tinycld/app-generated/*` alias and the
-uniwind type augmentation, so `tsc -p tsconfig.json` typechecks core standalone.
-
-## License
-
-[AGPL-3.0-only](./LICENSE) — © Nathan Stitt and the TinyCld contributors.
+For ecosystem documentation, see https://tinycld.org/docs.
